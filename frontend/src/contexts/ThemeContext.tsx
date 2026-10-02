@@ -1,0 +1,4 @@
+import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';import type{Theme}from'../types';
+interface ThemeValue{theme:Theme;setTheme:(theme:Theme)=>void}const ThemeContext=createContext<ThemeValue|undefined>(undefined);
+export function ThemeProvider({children}:{children:ReactNode}){const[theme,setTheme]=useState<Theme>(()=>(localStorage.getItem('theme')as Theme)||'system');useEffect(()=>{const dark=theme==='dark'||(theme==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);localStorage.setItem('theme',theme)},[theme]);return <ThemeContext.Provider value={{theme,setTheme}}>{children}</ThemeContext.Provider>}
+export const useTheme=()=>{const value=useContext(ThemeContext);if(!value)throw new Error('ThemeProvider ausente');return value};
