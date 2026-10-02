@@ -102,12 +102,32 @@ def test_keyword_lists_are_written_with_exiftool_separator(tmp_path, monkeypatch
  monkeypatch.setattr(subprocess, "run", run)
  ExifToolService().write_metadata(
   p,
-  {"PDF:Keywords": '["Caio Melo","curriculum vitæ","résumé","developer"]'},
+  {"PDF:Keywords": '["Luis Furmiga","curriculum vitæ","résumé","developer"]'},
  )
  args = run.call_args.args[0]
- assert args[2:4] == ["-sep", "; "]
- assert "-PDF:Keywords=Caio Melo; curriculum vitæ; résumé; developer" in args
+ assert "-sep" not in args
+ assert "-PDF:Keywords=" in args
+ assert "-PDF:Keywords+=Luis Furmiga" in args
+ assert "-PDF:Keywords+=curriculum vitæ" in args
+ assert "-PDF:Keywords+=résumé" in args
+ assert "-PDF:Keywords+=developer" in args
+
+
+def test_repeated_semicolons_and_empty_items_are_removed():
+ assert ExifToolService.normalize_list_value("Tag01;; Tag02; ; tag02") == [
+  "Tag01",
+  "Tag02",
+ ]
 
 
 def test_scalar_values_keep_semicolons():
- assert ExifToolService._format("PDF:Title", "Backend; Developer") == "Backend; Developer"
+ assert ExifToolService._format_scalar("Backend; Developer") == "Backend; Developer"
+
+
+def test_metadata_read_normalizes_legacy_keyword_separators():
+ service = MetadataService(ExifToolService())
+ fields = service.organize(
+  {"File:FileType": "PDF", "PDF:Keywords": ["Tag01;", "", "Tag02"]}
+ )
+ keywords = next(field for field in fields if field.full_name == "PDF:Keywords")
+ assert keywords.value == ["Tag01", "Tag02"]

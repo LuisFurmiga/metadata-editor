@@ -1,0 +1,26 @@
+name: metadados
+
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      METADATA_MAX_UPLOAD_SIZE: ${METADATA_MAX_UPLOAD_SIZE:-262144000}
+      METADATA_SESSION_TTL_SECONDS: ${METADATA_SESSION_TTL_SECONDS:-86400}
+    tmpfs:
+      - /tmp/metadata-editor:size=1g,mode=0700,uid=10001,gid=10001
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
