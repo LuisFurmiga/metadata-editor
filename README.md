@@ -2,8 +2,6 @@
 
 Aplicação local para visualizar, pesquisar, editar, remover e exportar metadados sem sobrescrever o arquivo enviado. O React conversa exclusivamente com a API FastAPI, que mantém uma cópia original e uma cópia de trabalho e delega toda leitura/escrita ao ExifTool.
 
-> **Screenshot:** execute o projeto e abra `http://localhost:5173`. Uma captura da interface pode ser adicionada aqui na publicação.
-
 ## Recursos
 
 - Upload por clique ou arrastar e soltar, com cancelamento e limite configurável (250 MB por padrão).
