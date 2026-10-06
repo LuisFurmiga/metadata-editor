@@ -3,9 +3,9 @@
 import re
 from typing import Any
 
-from app.models.metadata import MetadataField
+from backend.models.metadata import MetadataField
 
-from .exiftool_service import ExifToolService
+from backend.services.exiftool_service import ExifToolService
 
 FRIENDLY = {
     "Artist": "Autor",
@@ -76,11 +76,7 @@ class MetadataService:
         return self.exiftool.read_metadata(path)
 
     def organize(self, raw: dict[str, Any]) -> list[MetadataField]:
-        fields = [
-            self._field(key, value)
-            for key, value in raw.items()
-            if key != "SourceFile"
-        ]
+        fields = [self._field(key, value) for key, value in raw.items() if key != "SourceFile"]
         existing = {field.full_name.casefold() for field in fields}
         file_type = str(raw.get("File:FileType", "")).upper()
 

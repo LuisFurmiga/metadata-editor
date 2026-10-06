@@ -44,7 +44,7 @@ class ExifToolService:
         return shutil.which(self.binary, path=registry_path) if registry_path else None
 
     @staticmethod
-    def _windows_registry_path() -> str:
+    def _windows_registry_path(self) -> str:
         winreg = importlib.import_module("winreg")
         locations = (
             (winreg.HKEY_CURRENT_USER, r"Environment"),
@@ -72,7 +72,7 @@ class ExifToolService:
             )
         try:
             result = subprocess.run(
-                [executable, *arguments],
+                ["/usr/bin/perl", executable, *arguments],
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -84,12 +84,11 @@ class ExifToolService:
         except subprocess.TimeoutExpired as exc:
             raise ExifToolError("O ExifTool excedeu o tempo limite da operação.") from exc
         except OSError as exc:
+            logger.exception("Falha ao iniciar ExifTool: %s", exc)
             raise ExifToolError("Não foi possível iniciar o ExifTool.") from exc
         if result.returncode != 0:
             logger.error("ExifTool retornou código %s", result.returncode)
-            raise ExifToolError(
-                result.stderr.strip() or "O ExifTool não conseguiu processar o arquivo."
-            )
+            raise ExifToolError(result.stderr.strip() or "O ExifTool não conseguiu processar o arquivo.")
         return result
 
     def check_available(self) -> bool:
@@ -104,9 +103,7 @@ class ExifToolService:
 
     def read_metadata(self, file_path: Path) -> dict[str, Any]:
         self._ensure_file(file_path)
-        result = self._run(
-            ["-json", "-G", "-s", "-charset", "filename=UTF8", str(file_path)]
-        )
+        result = self._run(["-json", "-G", "-s", "-charset", "filename=UTF8", str(file_path)])
         try:
             payload = json.loads(result.stdout)
             if not isinstance(payload, list) or not payload or not isinstance(payload[0], dict):
