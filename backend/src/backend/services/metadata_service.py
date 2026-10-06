@@ -34,7 +34,7 @@ HELP_TEXT = {
     "Author": "Informe o nome da pessoa ou organização autora do conteúdo.",
     "Artist": "Informe o nome da pessoa ou organização autora do conteúdo.",
     "Subject": "Resuma o tema principal do documento em uma frase curta.",
-    "Keywords": "Separe diferentes palavras-chave com ponto e vírgula. Exemplo: Java; Spring Boot; PostgreSQL; Docker.",
+    "Keywords": "Use um único ponto e vírgula para separar cada palavra-chave. Espaços extras e separadores repetidos serão corrigidos. Exemplo: Java; Spring Boot; PostgreSQL; Docker.",
     "Description": "Descreva brevemente o conteúdo e a finalidade do arquivo.",
     "Language": "Use um código de idioma, como pt-BR para português do Brasil ou en-US para inglês dos EUA.",
     "Creator": "Programa que criou o documento. Normalmente, é melhor manter o valor existente.",
@@ -88,6 +88,8 @@ class MetadataService:
 
     def _field(self, key: str, value: Any, suggested: bool = False) -> MetadataField:
         group, name = key.split(":", 1) if ":" in key else ("Outros", key)
+        if ExifToolService.is_list_tag(f"{group}:{name}"):
+            value = ExifToolService.normalize_list_value(value)
         return MetadataField(
             group=group,
             name=name,

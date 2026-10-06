@@ -4,6 +4,7 @@ import importlib
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -113,10 +114,18 @@ class ExifToolService:
 
     def write_metadata(self, file_path: Path, changes: dict[str, Any]) -> None:
         self._ensure_file(file_path)
-        # -sep only affects list-type tags. Scalar fields keep semicolons verbatim,
-        # while values such as PDF:Keywords are split into proper list entries.
-        arguments = ["-overwrite_original", "-sep", "; "]
-        arguments.extend(f"-{tag}={self._format(tag, value)}" for tag, value in changes.items())
+        arguments = ["-overwrite_original"]
+        for tag, value in changes.items():
+            if self.is_list_tag(tag):
+                # Clear first, then append each item separately. Passing a joined
+                # string with -sep made some PDF writers retain the delimiter in
+                # an item, producing doubled semicolons after the next read.
+                arguments.append(f"-{tag}=")
+                arguments.extend(
+                    f"-{tag}+={item}" for item in self.normalize_list_value(value)
+                )
+            else:
+                arguments.append(f"-{tag}={self._format_scalar(value)}")
         self._run([*arguments, str(file_path)])
 
     def remove_tags(self, file_path: Path, tags: list[str]) -> None:
@@ -132,24 +141,43 @@ class ExifToolService:
         self._run(["-overwrite_original", "-gps:all=", "-xmp:geotag=", str(file_path)])
 
     @staticmethod
-    def _format(tag: str, value: Any) -> str:
+    def is_list_tag(tag: str) -> bool:
+        normalized = tag.casefold()
+        return normalized.endswith(":keywords") or normalized == "xmp-dc:subject"
+
+    @classmethod
+    def normalize_list_value(cls, value: Any) -> list[str]:
+        if isinstance(value, list):
+            candidates = value
+        else:
+            text = str(value).strip()
+            candidates: list[Any]
+            if text.startswith("["):
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError:
+                    parsed = None
+                candidates = parsed if isinstance(parsed, list) else re.split(r"\s*;+\s*", text)
+            else:
+                candidates = re.split(r"\s*;+\s*", text)
+
+        result: list[str] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            item = str(candidate).strip().strip(";").strip()
+            identity = item.casefold()
+            if item and identity not in seen:
+                result.append(item)
+                seen.add(identity)
+        return result
+
+    @staticmethod
+    def _format_scalar(value: Any) -> str:
         if value is True:
             return "true"
         if value is False:
             return "false"
-        if isinstance(value, list):
-            return "; ".join(str(item) for item in value)
-
-        text = str(value)
-        is_list_tag = tag.casefold().endswith(":keywords") or tag.casefold() == "xmp-dc:subject"
-        if is_list_tag and text.lstrip().startswith("["):
-            try:
-                parsed = json.loads(text)
-            except json.JSONDecodeError:
-                return text
-            if isinstance(parsed, list):
-                return "; ".join(str(item) for item in parsed)
-        return text
+        return str(value)
 
     @staticmethod
     def _ensure_file(path: Path) -> None:
