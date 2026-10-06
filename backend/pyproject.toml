@@ -1,0 +1,29 @@
+[project]
+name = "backend"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi==0.115.6",
+    "httpx==0.28.1",
+    "pydantic-settings==2.7.1",
+    "python-multipart==0.0.20",
+    "uvicorn[standard]==0.34.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.3.4",
+    "ruff>=0.15.13",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.22,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 120
+exclude = ["docker", ".venv"]
+src = ["src", "database/src", "events/src", "validation/src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
